@@ -3,7 +3,7 @@ import os.path
 import pandas as pd
 import torch
 import argparse
-from models import SimpleModel
+from models import MeanModel, UncertaintyModel
 from plots import plot_losses
 from data import get_dataset
 from learners import MeanLearner, UncertaintyLearner, NearestNeighborsLearner
@@ -37,7 +37,7 @@ def export_results_to_excel(results, output_file="results.xlsx"):
 
 def fit_and_eval_mvsvrc(X_train, Y_train, X_calibration, Y_calibration, X_test, Y_test, results,
                         input_size, hidden_size, epochs, batch_size, mean_model, lamda, m, u, database_name, seed):
-    uncertainty_model = SimpleModel(input_size + 2, hidden_size, output_size=(2 * m + 1), change_init_weight=True)
+    uncertainty_model = UncertaintyModel(input_size + 2, hidden_size, output_size=(2 * m + 1))
     uncertainty_model_path = f'uncertainty_weights/uncertainty_model_weights_{database_name}_{seed}.pth'
 
     uncertainty_learner = UncertaintyLearner(epochs, batch_size, uncertainty_model, mean_model, lamda,
@@ -78,12 +78,12 @@ def main(database_name, seed, batch_size, epochs, m, lamda, u, results, test_rat
         database_name, datasets_folder='datasets', seed=seed, test_ratio=test_ratio, calibration_ratio=calibration_ratio)
     input_size = X_train.shape[1]
     hidden_size = math.ceil(math.sqrt(X_train.shape[0] / 2))
-    mean_model = SimpleModel(input_size, hidden_size)
+    mean_model = MeanModel(input_size, hidden_size)
 
     mean_model_path = f'mean_weights/mean_model_weights_{database_name}_{seed}.pth'
 
     if not os.path.exists(mean_model_path):
-        mean_learner = MeanLearner(100, batch_size, mean_model, mean_model_path)
+        mean_learner = MeanLearner(500, batch_size, mean_model, mean_model_path)
         mean_train_loss, mean_test_loss = mean_learner.fit(X_train, X_test, Y_train, Y_test)
         plot_losses(mean_train_loss, mean_test_loss, database_name, seed, plot_title="Mean Model")
     else:
@@ -102,14 +102,14 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-batch_size', type=int, default=32, required=False)
-    parser.add_argument('-epochs', type=int, default=150, required=False)
+    parser.add_argument('-epochs', type=int, default=80, required=False)
     parser.add_argument('-lamda', type=float, default=0.02, required=False)
     parser.add_argument('-m', type=int, default=10, required=False)
     parser.add_argument('-u', type=int, default=0.9, required=False)
     args = parser.parse_args()
 
     results = dict()
-    for database in ["ble_rssi", "enb", "residential_building"]:
+    for database in ["residential_building"]:
         results[database] = dict()
         for i in range(10):
             results[database][i] = dict()

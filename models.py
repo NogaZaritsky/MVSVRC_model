@@ -3,8 +3,8 @@ from torch import nn
 from torch.nn import init
 
 
-class SimpleModel(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size=2, change_init_weight=False):
+class UncertaintyModel(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
         super().__init__()
         self.output_size = output_size
         self.hidden_size = hidden_size
@@ -17,8 +17,7 @@ class SimpleModel(nn.Module):
             nn.ReLU(),
             nn.Linear(in_features=hidden_size, out_features=output_size),
         )
-        if change_init_weight:
-            self._initialize_weights()
+        self._initialize_weights()
 
     def _initialize_weights(self):
         for m in self.sequential:
@@ -31,6 +30,20 @@ class SimpleModel(nn.Module):
                 else:
                     init.kaiming_normal_(m.weight, nonlinearity='relu')
                     init.zeros_(m.bias)
+
+    def forward(self, x):
+        return self.sequential(x)
+
+class MeanModel(nn.Module):
+    def __init__(self, input_size, hidden_size):
+        super().__init__()
+        self.sequential = nn.Sequential(
+            nn.Linear(in_features=input_size, out_features=hidden_size),
+            nn.ReLU(),
+            nn.Linear(in_features=hidden_size, out_features=hidden_size),
+            nn.ReLU(),
+            nn.Linear(in_features=hidden_size, out_features=2),
+        )
 
     def forward(self, x):
         return self.sequential(x)
